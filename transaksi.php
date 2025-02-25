@@ -12,8 +12,6 @@
             font-size: 12px;
         }
 
-
-
         /* Scrollable table */
         .table-container {
             max-height: 600px;
@@ -53,8 +51,6 @@
             border-radius: 4px;
             margin-top: 10px;
         }
-
-      
     </style>
 </head>
 
@@ -143,6 +139,25 @@
                                     <table class="table table-bordered">
                                         <tbody id="order-table"></tbody>
                                     </table>
+                                    
+                                    <!-- New Payment Section -->
+                                    <div class="mt-3 p-2 border rounded bg-light">
+                                        <div class="mb-3">
+                                            <label for="jumlah-bayar" class="form-label">Jumlah Bayar</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">Rp</span>
+                                                <input type="number" class="form-control" id="jumlah-bayar" min="0" placeholder="Masukkan jumlah bayar">
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="kembalian" class="form-label">Kembalian</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">Rp</span>
+                                                <input type="text" class="form-control" id="kembalian" readonly>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
                                     <div class="d-flex justify-content-between mt-3">
                                         <button class="btn btn-secondary" id="reset-order">Reset</button>
                                         <button class="btn btn-success" id="confirm-order">Konfirmasi</button>
@@ -166,12 +181,14 @@
     const resetOrder = document.getElementById("reset-order");
     const emptyOrderMessage = document.getElementById("empty-order-message");
     const orderDetails = document.getElementById("order-details");
+    const jumlahBayarInput = document.getElementById("jumlah-bayar");
+    const kembalianInput = document.getElementById("kembalian");
 
     const searchInput = document.getElementById('search');
     const tableBody = document.getElementById('barang-table');
 
-
     let orders = [];
+    let grandTotal = 0;
 
     document.querySelectorAll(".order-btn").forEach(button => {
         button.addEventListener("click", function() {
@@ -228,7 +245,7 @@
     function updateOrderTable() {
         orderTable.innerHTML = "";
         let totalDiskon = 0;
-        let grandTotal = 0;
+        grandTotal = 0;
 
         if (orders.length > 0) {
             emptyOrderMessage.style.display = "none";
@@ -286,11 +303,27 @@
                 </tr>
             `;
             orderTable.insertAdjacentHTML('beforeend', summaryRow);
+            
+            // Reset payment and change inputs when order changes
+            jumlahBayarInput.value = '';
+            kembalianInput.value = '';
         } else {
             emptyOrderMessage.style.display = "block";
             orderDetails.style.display = "none";
         }
     }
+
+    // Calculate change when payment amount changes
+    jumlahBayarInput.addEventListener("input", function() {
+        const jumlahBayar = parseFloat(this.value) || 0;
+        const kembalian = jumlahBayar - grandTotal;
+        
+        if (kembalian >= 0) {
+            kembalianInput.value = kembalian.toLocaleString();
+        } else {
+            kembalianInput.value = "Jumlah bayar kurang";
+        }
+    });
 
     // Handle quantity change
     orderTable.addEventListener("input", function(e) {
@@ -315,17 +348,34 @@
     });
 
     document.getElementById("confirm-order").addEventListener("click", () => {
-    if (orders.length === 0) {
-        alert("Tidak ada produk yang diorder!");
-        return;
-    }
+        if (orders.length === 0) {
+            alert("Tidak ada produk yang diorder!");
+            return;
+        }
+        
+        const jumlahBayar = parseFloat(jumlahBayarInput.value) || 0;
+        
+        if (jumlahBayar < grandTotal) {
+            alert("Jumlah pembayaran kurang dari total belanja!");
+            return;
+        }
+        
+        const kembalian = jumlahBayar - grandTotal;
 
-    fetch("proses_transaksi.php", {
+        // Add payment info to the order data
+        const orderData = {
+            items: orders,
+            jumlah_bayar: jumlahBayar,
+            kembalian: kembalian,
+            grand_total: grandTotal
+        };
+
+        fetch("proses_transaksi.php", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify(orders)
+            body: JSON.stringify(orderData)
         })
         .then(response => response.json())
         .then(data => {
@@ -336,16 +386,14 @@
                 // Refresh halaman setelah order berhasil
                 window.location.reload();
             } else {
-                alert("Terjadi kesalahan saat menyimpan transaksi.");
+                alert("Terjadi kesalahan saat menyimpan transaksi: " + (data.error || ""));
             }
         })
         .catch(error => {
             console.error("Error:", error);
             alert("Terjadi kesalahan saat memproses transaksi.");
         });
-});
-</script>
-
+    });
+    </script>
 </body>
-
 </html>

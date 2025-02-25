@@ -28,7 +28,10 @@ echo '
                 <th>Sub Total</th>
                 <th>Diskon</th>
                 <th>Total Harga</th>
+                <th>Jumlah Bayar</th>
+                <th>Kembalian</th>
                 <th>Tanggal Transaksi</th>
+           
             </tr>
         </thead>
         <tbody>';
@@ -41,6 +44,8 @@ while ($row = $result->fetch_assoc()) {
             <td>Rp" . number_format($row['sub_total'], 2) . "</td>
             <td>Rp" . number_format($row['diskon'], 2) . "</td>
             <td>Rp" . number_format($row['total_harga'], 2) . "</td>
+             <td>Rp" . number_format($row['jumlah_bayar'], 2) . "</td>
+              <td>Rp" . number_format($row['kembalian'], 2) . "</td>
             <td>{$row['tanggal_transaksi']}</td>
           </tr>";
 }

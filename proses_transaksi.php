@@ -1,7 +1,4 @@
-
-
 <?php
-
 // Koneksi ke database
 include 'koneksi.php';
 
@@ -9,13 +6,18 @@ include 'koneksi.php';
 $data = json_decode(file_get_contents('php://input'), true);
 
 // Periksa apakah data valid
-if ($data && is_array($data)) {
+if ($data && isset($data['items']) && is_array($data['items'])) {
     // Mulai transaksi
     $conn->begin_transaction();
 
     try {
+        // Ambil data pembayaran
+        $jumlah_bayar = $data['jumlah_bayar'];
+        $kembalian = $data['kembalian'];
+        $grand_total = $data['grand_total'];
+        
         // Loop untuk menyimpan setiap transaksi
-        foreach ($data as $order) {
+        foreach ($data['items'] as $order) {
             $idproduk = $order['id'];
             $nama_produk = $order['nama'];
             $jumlah = $order['qty'];
@@ -33,7 +35,7 @@ if ($data && is_array($data)) {
 
             // Cek stok produk terlebih dahulu
             $check_stmt = $conn->prepare("SELECT stok FROM barang WHERE idproduk = ?");
-            $check_stmt->bind_param("i", $idproduk);
+            $check_stmt->bind_param("s", $idproduk);
             $check_stmt->execute();
             $result = $check_stmt->get_result();
             $row = $result->fetch_assoc();
@@ -47,14 +49,14 @@ if ($data && is_array($data)) {
             // Jika stok mencukupi, kurangi stok
             $new_stok = $stok - $jumlah;
             $update_stmt = $conn->prepare("UPDATE barang SET stok = ? WHERE idproduk = ?");
-            $update_stmt->bind_param("ii", $new_stok, $idproduk);
+            $update_stmt->bind_param("is", $new_stok, $idproduk);
             if (!$update_stmt->execute()) {
                 throw new Exception("Error saat mengurangi stok produk: " . $update_stmt->error);
             }
 
             // Query untuk memasukkan data transaksi ke database
-            $stmt = $conn->prepare("INSERT INTO transaksi (idproduk, nama_produk, jumlah, sub_total, diskon, total_harga) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("ssiiid", $idproduk, $nama_produk, $jumlah, $sub_total, $diskon, $total_harga);
+            $stmt = $conn->prepare("INSERT INTO transaksi (idproduk, nama_produk, jumlah, sub_total, diskon, total_harga, jumlah_bayar, kembalian) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("ssiidddd", $idproduk, $nama_produk, $jumlah, $sub_total, $diskon, $total_harga, $jumlah_bayar, $kembalian);
 
             // Eksekusi query
             if (!$stmt->execute()) {
@@ -73,3 +75,4 @@ if ($data && is_array($data)) {
 } else {
     echo json_encode(['success' => false, 'error' => 'Data tidak valid']);
 }
+?>
