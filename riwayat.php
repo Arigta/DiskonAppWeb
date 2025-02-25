@@ -6,29 +6,20 @@ $title = "History";
 $header = '
 <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
     <h3>Riwayat Transaksi</h3>
+    <button onclick="printTable()" class="btn btn-success">Print</button>
 </div>';
 
 // Konten utama halaman
 ob_start(); // Mulai output buffering untuk menangkap konten
 include 'koneksi.php';
 
-// Pagination konfigurasi
-$limit = 10; // Jumlah data per halaman
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1; // Halaman saat ini
-$offset = ($page - 1) * $limit; // Offset untuk query
-
-// Hitung total data
-$total_query = $conn->query("SELECT COUNT(*) AS total FROM transaksi");
-$total_data = $total_query->fetch_assoc()['total'];
-$total_pages = ceil($total_data / $limit);
-
-// Query untuk mengambil data transaksi dengan limit dan offset
-$result = $conn->query("SELECT * FROM transaksi LIMIT $limit OFFSET $offset");
+// Query untuk mengambil semua data transaksi   
+$result = $conn->query("SELECT * FROM transaksi");
 
 // Tampilkan tabel riwayat transaksi
 echo '
-<div class="table-responsive mt-4">
-    <table class="table table-striped table-bordered">
+<div class="table-responsive mt-4" style="max-height: 500px; overflow-y: auto;">
+    <table class="table table-striped table-bordered" id="transactionTable">
         <thead class="table-dark">
             <tr>
                 <th>ID Transaksi</th>
@@ -48,7 +39,7 @@ while ($row = $result->fetch_assoc()) {
             <td>{$row['nama_produk']}</td>
             <td>{$row['jumlah']}</td>
             <td>Rp" . number_format($row['sub_total'], 2) . "</td>
-             <td>Rp" . number_format($row['diskon'], 2) . "</td>
+            <td>Rp" . number_format($row['diskon'], 2) . "</td>
             <td>Rp" . number_format($row['total_harga'], 2) . "</td>
             <td>{$row['tanggal_transaksi']}</td>
           </tr>";
@@ -58,25 +49,19 @@ echo '</tbody>
     </table>
 </div>';
 
-// Tombol pagination
-echo '<div class="d-flex justify-content-between align-items-center mt-3">';
-if ($page > 1) {
-    $prev_page = $page - 1;
-    echo "<a href='?page=$prev_page' class='btn btn-outline-primary'>Sebelumnya</a>";
-} else {
-    echo "<button class='btn btn-outline-secondary' disabled>Sebelumnya</button>";
-}
-
-if ($page < $total_pages) {
-    $next_page = $page + 1;
-    echo "<a href='?page=$next_page' class='btn btn-outline-primary ms-auto'>Berikutnya</a>";
-} else {
-    echo "<button class='btn btn-outline-secondary ms-auto' disabled>Berikutnya</button>";
-}
-echo '</div>';
-
 $content = ob_get_clean(); // Tangkap konten tabel ke dalam variabel $content
 
 // Sertakan template untuk menampilkan halaman
 include 'template.php';
+
 ?>
+
+<script>
+function printTable() {
+    var printContent = document.getElementById("transactionTable").outerHTML;
+    var originalContent = document.body.innerHTML;
+    document.body.innerHTML = "<h2>Riwayat Transaksi</h2>" + '<br>' + printContent + '<footer class="bg-dark text-white text-center py-3">';
+    window.print();
+    document.body.innerHTML = originalContent;
+}
+</script>
